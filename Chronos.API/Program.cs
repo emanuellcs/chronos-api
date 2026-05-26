@@ -7,7 +7,20 @@ using Scalar.AspNetCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // --- Service Registration ---
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer((document, context, cancellationToken) =>
+    {
+        foreach (var server in document.Servers)
+        {
+            if (server.Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            {
+                server.Url = server.Url.Replace("http://", "https://", StringComparison.OrdinalIgnoreCase);
+            }
+        }
+        return Task.CompletedTask;
+    });
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddChronosInfrastructure(builder.Configuration, builder.Environment);
 
@@ -25,7 +38,7 @@ app.UseHttpsRedirection();
 
 // --- Endpoint Mapping ---
 // Redirecting root to documentation for a friction-free user experience
-app.MapGet("/", () => Results.Redirect("/swagger"));
+app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 app.MapHealthEndpoints();
 app.MapAppointmentEndpoints();
 
