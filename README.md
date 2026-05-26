@@ -15,7 +15,7 @@ The microservice architecture is built upon a standardized set of technologies a
 
 | Category | Technology / Tool | Specification / Version |
 |---|---|---|
-| **Programming Language** | C# | 13.0 |
+| **Programming Language** | C# | 14.0 |
 | **Runtime Framework** | .NET | 10.0 (Minimal APIs) |
 | **Object-Relational Mapper** | Entity Framework Core | 10.0 |
 | **Primary Database** | PostgreSQL | 18.0 (Managed) |
@@ -133,6 +133,10 @@ The container is configured to run as a non-root user using the `USER app` direc
 
 The local Docker Compose configuration establishes a dedicated bridge network named `chronos_isolated_network`. This configuration ensures that the database service is not exposed to the host network, requiring all access to originate from within the container mesh.
 
+### Cross-Origin Resource Sharing (CORS)
+
+To support integration with frontend applications during local development and within the Docker Compose mesh, the API implements a permissive CORS policy. The `AllowAll` policy permits requests from any origin, method, and header. This configuration ensures that the backend is accessible by decoupled frontend services while maintaining a consistent development experience. In a production environment with fixed frontend origins, this policy should be narrowed to restrict access to specific trusted domains.
+
 ### Volume Persistence and Data Integrity
 
 To prevent data volatility and ensure the persistence of domain records across container lifecycles, the local infrastructure configures an isolated named volume called `postgres_data` mapped to the PostgreSQL container filesystem path `/var/lib/postgresql/data`. This architectural constraint ensures that database state changes, appointment tables, and WAL (Write-Ahead Logging) structures remain persistent on the host storage disk even during complete container destruction, rebuilding (`docker compose down`), or runtime recycling operations.
@@ -245,7 +249,7 @@ dotnet build
 To run the deterministic integration testing matrix locally inside an isolated in-memory context using SQLite, bypassing the requirement for external database containers:
 
 ```bash
-dotnet test Chronos.API.Tests/Chronos.API.Tests.csproj
+dotnet test
 ```
 
 ### 4. Orchestrate the Multi-Container Local Environment

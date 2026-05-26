@@ -2,7 +2,7 @@
 
 Este repositório contém o código-fonte e as configurações da API Chronos, desenvolvida como entregável técnico para o programa de formação profissional Capacita iRede, dentro da Trilha de Provimento de Serviços Computacionais (Computação em Nuvem). A documentação aqui apresentada descreve a implementação arquitetural, o mapeamento de infraestrutura e as configurações de deploy exigidas pelos critérios de avaliação do programa.
 
-A API Chronos é um microsserviço de agendamento livre de estado (stateless), implementado utilizando o framework .NET 10 Minimal APIs com C# 13. A persistência é gerenciada por um banco de dados relacional PostgreSQL 18. O sistema foi projetado para eficiência de recursos e consistência operacional, fornecendo a base estrutural para o gerenciamento de dados de agendamento.
+A API Chronos é um microsserviço de agendamento livre de estado (stateless), implementado utilizando o framework .NET 10 Minimal APIs com C# 14. A persistência é gerenciada por um banco de dados relacional PostgreSQL 18. O sistema foi projetado para eficiência de recursos e consistência operacional, fornecendo a base estrutural para o gerenciamento de dados de agendamento.
 
 **Ambiente de Produção:** [https://chronos-api-y0v6.onrender.com](https://chronos-api-y0v6.onrender.com)
 
@@ -12,7 +12,7 @@ A arquitetura do microsserviço baseia-se em um conjunto padronizado de tecnolog
 
 | Categoria | Tecnologia / Ferramenta | Especificação / Versão |
 |---|---|---|
-| **Linguagem de Programação** | C# | 13.0 |
+| **Linguagem de Programação** | C# | 14.0 |
 | **Framework de Runtime** | .NET | 10.0 (Minimal APIs) |
 | **Mapeador Objeto-Relacional** | Entity Framework Core | 10.0 |
 | **Banco de Dados Primário** | PostgreSQL | 18.0 (Gerenciado) |
@@ -130,6 +130,10 @@ O contêiner é configurado para ser executado como um usuário não-root utiliz
 
 A configuração local do Docker Compose estabelece uma rede de ponte dedicada chamada `chronos_isolated_network`. Esta configuração garante que o serviço de banco de dados não seja exposto à rede do host, exigindo que todo o acesso se origine de dentro da malha de contêineres.
 
+### Cross-Origin Resource Sharing (CORS)
+
+Para suportar a integração com aplicações frontend durante o desenvolvimento local e dentro da malha do Docker Compose, a API implementa uma política de CORS permissiva. A política `AllowAll` permite requisições de qualquer origem, método e cabeçalho. Esta configuração garante que o backend seja acessível por serviços de frontend desacoplados, mantendo uma experiência de desenvolvimento consistente. Em um ambiente de produção com origens de frontend fixas, esta política deve ser estreitada para restringir o acesso apenas a domínios confiáveis específicos.
+
 ### Persistência de Volume e Integridade de Dados
 
 Para evitar a volatilidade dos dados e garantir a persistência dos registros de domínio ao longo dos ciclos de vida dos contêineres, a infraestrutura local configura um volume nomeado isolado chamado `postgres_data` mapeado para o caminho do sistema de arquivos do contêiner PostgreSQL `/var/lib/postgresql/data`. Esta restrição arquitetural garante que as alterações de estado do banco de dados, as tabelas de agendamento e as estruturas de WAL (Write-Ahead Logging) permaneçam persistentes no disco de armazenamento do host, mesmo durante operações completas de destruição de contêiner, reconstrução (`docker compose down`) ou reciclagem em tempo de execução.
@@ -242,7 +246,7 @@ dotnet build
 Para executar a matriz de testes de integração determinística localmente dentro de um contexto isolado em memória utilizando SQLite, ignorando a necessidade de contêineres de banco de dados externos:
 
 ```bash
-dotnet test Chronos.API.Tests/Chronos.API.Tests.csproj
+dotnet test
 ```
 
 ### 4. Orquestrar o Ambiente Local Multi-Contêiner

@@ -11,27 +11,52 @@ builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer((document, context, cancellationToken) =>
     {
-        foreach (var server in document.Servers)
+        // Explicitly setting the document title to remove the period from the default project-based title.
+        document.Info.Title = "Chronos API";
+
+        // Only force HTTPS for OpenAPI server URLs in Production environments.
+        // This prevents connectivity issues in local development (HTTP).
+        if (builder.Environment.IsProduction() && document.Servers is not null)
         {
-            if (server.Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            foreach (var server in document.Servers)
             {
-                server.Url = server.Url.Replace("http://", "https://", StringComparison.OrdinalIgnoreCase);
+                if (server.Url is not null && server.Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                {
+                    server.Url = server.Url.Replace("http://", "https://", StringComparison.OrdinalIgnoreCase);
+                }
             }
         }
         return Task.CompletedTask;
     });
 });
 builder.Services.AddEndpointsApiExplorer();
+/*
+ * Configures Cross-Origin Resource Sharing (CORS) policies.
+ * The "AllowAll" policy permits requests from any origin, using any method and header,
+ * which is suitable for local development and Docker Compose environments.
+ */
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 builder.Services.AddChronosInfrastructure(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
 
 // --- Middleware Pipeline ---
+app.UseCors("AllowAll");
+
 // Enabling OpenAPI and interactive documentation for all environments to support PaaS validation
 app.MapOpenApi();
 app.MapScalarApiReference("/swagger", options => 
 {
-    options.WithTitle("Chronos API Documentation");
+    options.WithTitle("Chronos API");
 });
 
 app.UseHttpsRedirection();
