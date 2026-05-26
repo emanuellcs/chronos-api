@@ -1,0 +1,55 @@
+services:
+  # --- Database Service: PostgreSQL 18 ---
+  chronos-db:
+    image: postgres:18-alpine
+    container_name: chronos-db
+    environment:
+      - POSTGRES_USER=chronos_admin
+      - POSTGRES_PASSWORD=hardened_password_2026
+      - POSTGRES_DB=chronos_db
+    # Security: Port 5432 is NOT exposed to the host machine.
+    # It remains strictly enclosed within the private mesh to demonstrate zero external exposure of backends.
+    expose:
+      - "5432"
+    # Healthcheck: Ensures the database is fully ready before the API attempts a handshake.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chronos_admin -d chronos_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    # Persistence: Named volume ensures state retention across container teardown lifecycles.
+    # Note: In PostgreSQL 18+, the volume must be mounted at /var/lib/postgresql to support
+    # major-version-specific subdirectories and pg_upgrade operations.
+    volumes:
+      - chronos_postgres_data:/var/lib/postgresql
+    networks:
+      - chronos_isolated_network
+
+  # --- API Service: .NET 10 Minimal API ---
+  chronos-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chronos-api
+    ports:
+      # Mapping the external host port to the internal unprivileged port 8080.
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      # Overriding the default connection string to target the internal container DNS name.
+      - ConnectionStrings__DefaultConnection=Host=chronos-db;Database=chronos_db;Username=chronos_admin;Password=hardened_password_2026
+    # Deterministic Initialization: The API container suspends until the database passes its healthcheck.
+    depends_on:
+      chronos-db:
+        condition: service_healthy
+    networks:
+      - chronos_isolated_network
+
+networks:
+  # Dedicated custom bridge network for secure inter-container communication.
+  chronos_isolated_network:
+    driver: bridge
+
+volumes:
+  # Persistent storage for PostgreSQL data.
+  chronos_postgres_data:

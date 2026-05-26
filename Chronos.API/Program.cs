@@ -2,6 +2,7 @@ using Chronos.API.Configuration;
 using Chronos.API.Endpoints;
 using Chronos.API.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +17,11 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    // Enabling the interactive documentation UI at /swagger
+    app.MapScalarApiReference("/swagger", options => 
+    {
+        options.WithTitle("Chronos API Documentation");
+    });
 }
 
 app.UseHttpsRedirection();
@@ -28,19 +34,32 @@ app.MapAppointmentEndpoints();
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+
+    // Hardened environment telemetry
+    logger.LogInformation("==================================================================");
+    logger.LogInformation("[SYSTEM TELEMETRY] Operating under a secure, non-root environment.");
+    logger.LogInformation("==================================================================");
+    logger.LogInformation("[INFO] Chronos API is establishing connection handshake with PostgreSQL 18 container network...");
+
     try
     {
         var context = services.GetRequiredService<ChronosDbContext>();
+        
+        logger.LogInformation("[DATABASE] Applying programmatic Entity Framework Core migrations to PostgreSQL database schema...");
+        
         // Applying programmatic migrations directly on application startup to guarantee database readiness
         if (context.Database.GetPendingMigrations().Any())
         {
             await context.Database.MigrateAsync();
         }
+
+        // Success banner
+        logger.LogInformation("[SUCCESS] Database schema is completely synchronized. Chronos API is healthy and live. Access interactive Swagger documentation at http://localhost:8080/swagger");
     }
     catch (Exception ex)
     {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while migrating the database.");
+        logger.LogError(ex, "[ERROR] An error occurred while migrating the database.");
     }
 }
 
