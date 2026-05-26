@@ -1,0 +1,30 @@
+name: Chronos API Continuous Integration
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  quality-assurance:
+    name: Quality Assurance Gate
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Synchronize workspace source
+      uses: actions/checkout@v6
+
+    - name: Initialize .NET 10 execution environment
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Restore all solution dependencies with caching
+      run: dotnet restore Chronos.slnx
+
+    - name: Compile solution under Release configuration
+      run: dotnet build Chronos.slnx --configuration Release --no-restore
+
+    - name: Execute automated integration testing engine
+      run: dotnet test Chronos.slnx --configuration Release --no-build --verbosity normal

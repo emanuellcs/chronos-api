@@ -9,7 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 // --- Service Registration ---
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddChronosInfrastructure(builder.Configuration);
+builder.Services.AddChronosInfrastructure(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
 
@@ -46,12 +46,18 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<ChronosDbContext>();
         
-        logger.LogInformation("[DATABASE] Applying programmatic Entity Framework Core migrations to PostgreSQL database schema...");
-        
-        // Applying programmatic migrations directly on application startup to guarantee database readiness
-        if (context.Database.GetPendingMigrations().Any())
+        if (context.Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
         {
-            await context.Database.MigrateAsync();
+            logger.LogInformation("[DATABASE] SQLite provider detected. Initializing in-memory schema using EnsureCreatedAsync...");
+            await context.Database.EnsureCreatedAsync();
+        }
+        else
+        {
+            logger.LogInformation("[DATABASE] PostgreSQL provider detected. Applying programmatic Entity Framework Core migrations...");
+            if (context.Database.GetPendingMigrations().Any())
+            {
+                await context.Database.MigrateAsync();
+            }
         }
 
         // Success banner
@@ -64,3 +70,8 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+/// <summary>
+/// Exposes the Program class for the xUnit integration testing project using WebApplicationFactory.
+/// </summary>
+public partial class Program { }
