@@ -1,0 +1,23 @@
+# Render Blueprint Configuration for Chronos API
+# This manifest defines the multi-service infrastructure for the Chronos appointment system.
+
+databases:
+  - name: chronos-db
+    databaseName: chronos_appointments_db
+    user: chronos_operator
+    plan: free
+
+services:
+  - type: web
+    name: chronos-api
+    runtime: docker
+    plan: free
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://+:8080
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: chronos-db
+          property: connectionString

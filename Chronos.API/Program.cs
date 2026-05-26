@@ -14,19 +14,18 @@ builder.Services.AddChronosInfrastructure(builder.Configuration, builder.Environ
 var app = builder.Build();
 
 // --- Middleware Pipeline ---
-if (app.Environment.IsDevelopment())
+// Enabling OpenAPI and interactive documentation for all environments to support PaaS validation
+app.MapOpenApi();
+app.MapScalarApiReference("/swagger", options => 
 {
-    app.MapOpenApi();
-    // Enabling the interactive documentation UI at /swagger
-    app.MapScalarApiReference("/swagger", options => 
-    {
-        options.WithTitle("Chronos API Documentation");
-    });
-}
+    options.WithTitle("Chronos API Documentation");
+});
 
 app.UseHttpsRedirection();
 
 // --- Endpoint Mapping ---
+// Redirecting root to documentation for a friction-free user experience
+app.MapGet("/", () => Results.Redirect("/swagger"));
 app.MapHealthEndpoints();
 app.MapAppointmentEndpoints();
 
