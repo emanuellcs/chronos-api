@@ -23,6 +23,23 @@ public static class ServiceCollectionExtensions
         {
             var connectionString = configuration.GetConnectionString("DefaultConnection");
 
+            // Dynamic translation for RFC-compliant database URI protocols (e.g., from Render)
+            // to the ADO.NET key-value matrix expected by Npgsql.
+            if (!string.IsNullOrEmpty(connectionString) &&
+                (connectionString.StartsWith("postgres://") || connectionString.StartsWith("postgresql://")))
+            {
+                var uri = new Uri(connectionString);
+                var userInfo = uri.UserInfo.Split(':');
+
+                var host = uri.Host;
+                var port = uri.Port <= 0 ? 5432 : uri.Port;
+                var database = uri.LocalPath.TrimStart('/');
+                var username = userInfo[0];
+                var password = userInfo.Length > 1 ? userInfo[1] : string.Empty;
+
+                connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;";
+            }
+
             services.AddDbContext<ChronosDbContext>(options =>
                 options.UseNpgsql(connectionString, npgsqlOptions =>
                 {
